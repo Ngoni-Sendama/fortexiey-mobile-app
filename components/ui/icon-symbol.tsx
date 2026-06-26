@@ -20,6 +20,8 @@ const MAPPING = {
   'chevron.right': 'chevron-right',
   'person.fill': 'person',
   'doc.text.fill': 'description',
+  'sun.max.fill': 'wb-sunny',
+  'moon.fill': 'bedtime',
 } as IconMapping;
 
 /**

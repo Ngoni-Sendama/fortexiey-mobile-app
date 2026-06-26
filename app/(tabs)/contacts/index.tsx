@@ -2,7 +2,6 @@ import { useCallback, useMemo, useState } from 'react';
 import { Pressable, SectionList, StyleSheet } from 'react-native';
 import { router, useFocusEffect } from 'expo-router';
 
-import { IconSymbol } from '@/components/ui/icon-symbol';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Colors } from '@/constants/theme';
@@ -67,41 +66,31 @@ function ContactCard({ contact }: { contact: Contact }) {
         router.navigate({ pathname: '/contacts/[id]', params: { id: contact.id } })
       }
       style={({ pressed }) => [
-        styles.card,
-        { backgroundColor: colors.background, borderColor: colors.icon + '40' },
-        pressed && { opacity: 0.7 },
+        { backgroundColor: pressed ? colors.icon + '20' : 'transparent' },
       ]}>
-      <ThemedView style={styles.avatar}>
-        <ThemedText type="subtitle" style={styles.avatarText}>
-          {contact.name
-            .split(' ')
-            .map((n) => n[0])
-            .join('')}
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.cardBody}>
-        <ThemedView style={styles.topRow}>
-          <ThemedText
-            type="defaultSemiBold"
-            style={styles.name}
-            numberOfLines={1}>
-            {contact.name}
+      <ThemedView style={styles.row}>
+        <ThemedView style={styles.rowBody}>
+          <ThemedView style={styles.topRow}>
+            <ThemedView style={styles.nameRow}>
+              {!contact.read && <ThemedView style={styles.unreadDot} />}
+              <ThemedText
+                style={[styles.name, !contact.read && styles.nameUnread]}
+                numberOfLines={1}>
+                {contact.name}
+              </ThemedText>
+            </ThemedView>
+            <ThemedView style={styles.rightColumn}>
+              <ThemedText style={styles.date}>{contact.date.split(' ')[1]}</ThemedText>
+              <ThemedView style={[styles.serviceBadge, { backgroundColor: SERVICE_COLORS[contact.service] }]}>
+                <ThemedText style={styles.serviceText}>{contact.service}</ThemedText>
+              </ThemedView>
+            </ThemedView>
+          </ThemedView>
+          <ThemedText style={styles.email} numberOfLines={1} ellipsizeMode="tail">
+            {contact.email}
           </ThemedText>
-          <ThemedView style={styles.dateColumn}>
-            <ThemedText style={styles.date}>{contact.date}</ThemedText>
-            {!contact.read && <ThemedView style={styles.unreadDot} />}
-          </ThemedView>
-        </ThemedView>
-        <ThemedText style={styles.email} numberOfLines={1}>
-          {contact.email}
-        </ThemedText>
-        <ThemedView style={styles.bottomRow}>
-          <ThemedView style={[styles.serviceBadge, { backgroundColor: SERVICE_COLORS[contact.service] }]}>
-            <ThemedText style={styles.serviceText}>{contact.service}</ThemedText>
-          </ThemedView>
         </ThemedView>
       </ThemedView>
-      <IconSymbol name="chevron.right" size={20} color={colors.icon} />
     </Pressable>
   );
 }
@@ -175,6 +164,9 @@ export default function ContactListScreen() {
             </ThemedText>
           </ThemedView>
         )}
+        ItemSeparatorComponent={() => (
+          <ThemedView style={[styles.separator, { borderBottomColor: colors.icon + '20' }]} />
+        )}
         contentContainerStyle={styles.list}
       />
     </ThemedView>
@@ -184,7 +176,7 @@ export default function ContactListScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    paddingTop: 60,
+    paddingTop: 125,
   },
   header: {
     paddingHorizontal: 20,
@@ -210,87 +202,77 @@ const styles = StyleSheet.create({
     fontSize: 13,
   },
   list: {
-    paddingHorizontal: 16,
     paddingBottom: 20,
   },
   sectionHeader: {
-    paddingHorizontal: 4,
-    paddingVertical: 12,
-    paddingTop: 20,
+    paddingHorizontal: 20,
+    paddingVertical: 8,
+    paddingTop: 16,
   },
   sectionHeaderText: {
     fontSize: 13,
     fontWeight: '600',
     opacity: 0.5,
   },
-  card: {
+  row: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 14,
-    marginVertical: 4,
-    borderRadius: 12,
-    borderWidth: 1,
+    paddingVertical: 10,
+    paddingHorizontal: 20,
   },
-  avatar: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#0a7ea4',
-  },
-  avatarText: {
-    color: '#fff',
-    fontSize: 15,
-    fontFamily: 'normal',
-  },
-  cardBody: {
+  rowBody: {
     flex: 1,
-    marginLeft: 12,
-    gap: 2,
+    gap: 1,
   },
   topRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
   },
-  name: {
-    flex: 1,
-    fontSize: 15,
-    marginRight: 8,
-  },
-  dateColumn: {
-    alignItems: 'center',
-  },
-  date: {
-    fontSize: 12,
-    opacity: 0.4,
-  },
-  unreadDot: {
-    width: 7,
-    height: 7,
-    borderRadius: 4,
-    backgroundColor: '#0a7ea4',
-    marginTop: 3,
-  },
-  email: {
-    fontSize: 13,
-    opacity: 0.6,
-  },
-  bottomRow: {
+  nameRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    marginTop: 4,
+    flex: 1,
+    marginRight: 8,
+  },
+  name: {
+    fontSize: 16,
+    color: '#000',
+  },
+  nameUnread: {
+    fontWeight: '700',
+  },
+  rightColumn: {
+    alignItems: 'flex-end',
+    gap: 4,
+  },
+  date: {
+    fontSize: 13,
+    opacity: 0.4,
   },
   serviceBadge: {
-    alignSelf: 'flex-start',
-    borderRadius: 6,
-    paddingHorizontal: 8,
-    paddingVertical: 2,
+    borderRadius: 4,
+    paddingHorizontal: 6,
+    paddingVertical: 1,
   },
   serviceText: {
     color: '#fff',
-    fontSize: 11,
+    fontSize: 9,
+  },
+  unreadDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#0a7ea4',
+    marginRight: 8,
+  },
+  email: {
+    fontSize: 14,
+    opacity: 0.5,
+    marginTop: -18,
+  },
+  separator: {
+    marginLeft: 20,
+    borderBottomWidth: 0.5,
   },
 });

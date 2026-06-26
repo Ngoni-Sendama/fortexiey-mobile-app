@@ -1,4 +1,4 @@
-import { Pressable, ScrollView, StyleSheet } from 'react-native';
+import { Alert, Pressable, ScrollView, StyleSheet } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 
 import { ThemedText } from '@/components/themed-text';
@@ -22,7 +22,9 @@ export default function ContactDetailScreen() {
   }
 
   const toggleRead = () => {
+    const wasRead = contact.read;
     markContactRead(contact.id, !contact.read);
+    Alert.alert('Success', wasRead ? 'Marked as unread' : 'Marked as read');
     router.back();
   };
 
