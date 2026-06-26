@@ -1,12 +1,13 @@
-import { useCallback, useMemo, useState } from 'react';
-import { Pressable, SectionList, StyleSheet } from 'react-native';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { ActivityIndicator, Pressable, SectionList, StyleSheet } from 'react-native';
 import { router, useFocusEffect } from 'expo-router';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
-import { mockContacts, SERVICE_COLORS, type Contact } from '@/data/contacts';
+import { setOnNewContactCallback } from '@/hooks/use-notification-setup';
+import { getContacts, fetchAndSetContacts, SERVICE_COLORS, type Contact } from '@/data/contacts';
 
 type Filter = 'all' | 'unread' | 'read';
 
@@ -17,7 +18,9 @@ const FILTERS: { key: Filter; label: string; getLabel?: (count: number) => strin
 ];
 
 function formatDateLabel(dateStr: string): string {
-  const date = new Date(dateStr + 'T00:00:00');
+  const [year, month, day] = dateStr.split('-').map(Number);
+  const date = new Date(year, month - 1, day);
+
   const today = new Date();
   const yesterday = new Date(today);
   yesterday.setDate(yesterday.getDate() - 1);
@@ -39,8 +42,13 @@ function formatDateLabel(dateStr: string): string {
   return date.toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' });
 }
 
-function extractDate(datetime: string): string {
-  return datetime.split(' ')[0];
+function extractDate(iso: string): string {
+  return iso.split('T')[0];
+}
+
+function formatTime(iso: string): string {
+  const d = new Date(iso);
+  return d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false });
 }
 
 function groupByDate(contacts: Contact[]) {
@@ -80,7 +88,7 @@ function ContactCard({ contact }: { contact: Contact }) {
               </ThemedText>
             </ThemedView>
             <ThemedView style={styles.rightColumn}>
-              <ThemedText style={styles.date}>{contact.date.split(' ')[1]}</ThemedText>
+              <ThemedText style={styles.date}>{formatTime(contact.date)}</ThemedText>
               <ThemedView style={[styles.serviceBadge, { backgroundColor: SERVICE_COLORS[contact.service] }]}>
                 <ThemedText style={styles.serviceText}>{contact.service}</ThemedText>
               </ThemedView>
@@ -96,26 +104,50 @@ function ContactCard({ contact }: { contact: Contact }) {
 }
 
 export default function ContactListScreen() {
+  const [contacts, setContacts] = useState<Contact[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [filter, setFilter] = useState<Filter>('all');
   const [refreshKey, setRefreshKey] = useState(0);
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
 
+  const loadContacts = useCallback(async () => {
+    try {
+      setError(null);
+      await fetchAndSetContacts();
+      setContacts(getContacts());
+    } catch (e) {
+      console.log('[Contacts] Fetch error:', e);
+      setError(`Failed to load contacts: ${e instanceof Error ? e.message : 'Unknown'}`);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadContacts();
+  }, [loadContacts]);
+
   useFocusEffect(
     useCallback(() => {
-      setRefreshKey((k) => k + 1);
-    }, [])
+      loadContacts();
+    }, [loadContacts])
   );
+
+  useEffect(() => {
+    return setOnNewContactCallback(loadContacts);
+  }, [loadContacts]);
 
   const filtered = useMemo(
     () =>
       filter === 'all'
-        ? [...mockContacts]
-        : mockContacts.filter((c) => (filter === 'read' ? c.read : !c.read)),
-    [filter, refreshKey]
+        ? [...contacts]
+        : contacts.filter((c) => (filter === 'read' ? c.read : !c.read)),
+    [filter, contacts, refreshKey]
   );
 
-  const unreadCount = useMemo(() => mockContacts.filter((c) => !c.read).length, [refreshKey]);
+  const unreadCount = useMemo(() => contacts.filter((c) => !c.read).length, [contacts]);
 
   const sections = useMemo(() => groupByDate(filtered), [filtered]);
 
@@ -123,52 +155,73 @@ export default function ContactListScreen() {
     <ThemedView style={styles.container}>
       <ThemedView style={styles.header}>
         <ThemedText type="title">Contacts</ThemedText>
-        <ThemedText style={styles.subtitle}>
-          {filtered.length} contact{filtered.length !== 1 ? 's' : ''}
-        </ThemedText>
+        {!loading && (
+          <ThemedText style={styles.subtitle}>
+            {filtered.length} contact{filtered.length !== 1 ? 's' : ''}
+          </ThemedText>
+        )}
       </ThemedView>
 
-      <ThemedView style={styles.filterRow}>
-        {FILTERS.map((f) => {
-          const label = f.getLabel ? f.getLabel(unreadCount) : f.label;
-          return (
-          <Pressable
-            key={f.key}
-            onPress={() => setFilter(f.key)}
-            style={[
-              styles.filterChip,
-              { borderColor: colors.icon + '60' },
-              filter === f.key && { backgroundColor: colors.tint, borderColor: colors.tint },
-            ]}>
-            <ThemedText
+      {!loading && (
+        <ThemedView style={styles.filterRow}>
+          {FILTERS.map((f) => {
+            const label = f.getLabel ? f.getLabel(unreadCount) : f.label;
+            return (
+            <Pressable
+              key={f.key}
+              onPress={() => setFilter(f.key)}
               style={[
-                styles.filterLabel,
-                filter === f.key && { color: colors.background },
+                styles.filterChip,
+                { borderColor: colors.icon + '60' },
+                filter === f.key && { backgroundColor: colors.tint, borderColor: colors.tint },
               ]}>
-              {label}
-            </ThemedText>
-          </Pressable>
-        );
-        })}
-      </ThemedView>
+              <ThemedText
+                style={[
+                  styles.filterLabel,
+                  filter === f.key && { color: colors.background },
+                ]}>
+                {label}
+              </ThemedText>
+            </Pressable>
+          );
+          })}
+        </ThemedView>
+      )}
 
-      <SectionList
-        key={refreshKey}
-        sections={sections}
-        keyExtractor={(item) => item.id}
-        renderItem={({ item }) => <ContactCard contact={item} />}
-        renderSectionHeader={({ section: { title } }) => (
-          <ThemedView style={styles.sectionHeader}>
-            <ThemedText style={styles.sectionHeaderText}>
-              {formatDateLabel(title)}
-            </ThemedText>
-          </ThemedView>
-        )}
-        ItemSeparatorComponent={() => (
-          <ThemedView style={[styles.separator, { borderBottomColor: colors.icon + '20' }]} />
-        )}
-        contentContainerStyle={styles.list}
-      />
+      {loading && (
+        <ThemedView style={styles.center}>
+          <ActivityIndicator size="large" color={colors.tint} />
+        </ThemedView>
+      )}
+
+      {error && !loading && (
+        <ThemedView style={styles.center}>
+          <ThemedText style={styles.errorText}>{error}</ThemedText>
+          <Pressable onPress={loadContacts} style={[styles.retryButton, { backgroundColor: colors.tint }]}>
+            <ThemedText style={[styles.retryText, { color: colors.background }]}>Retry</ThemedText>
+          </Pressable>
+        </ThemedView>
+      )}
+
+      {!loading && !error && (
+        <SectionList
+          key={refreshKey}
+          sections={sections}
+          keyExtractor={(item) => item.id}
+          renderItem={({ item }) => <ContactCard contact={item} />}
+          renderSectionHeader={({ section: { title } }) => (
+            <ThemedView style={styles.sectionHeader}>
+              <ThemedText style={styles.sectionHeaderText}>
+                {formatDateLabel(title)}
+              </ThemedText>
+            </ThemedView>
+          )}
+          ItemSeparatorComponent={() => (
+            <ThemedView style={[styles.separator, { borderBottomColor: colors.icon + '20' }]} />
+          )}
+          contentContainerStyle={styles.list}
+        />
+      )}
     </ThemedView>
   );
 }
@@ -200,6 +253,25 @@ const styles = StyleSheet.create({
   },
   filterLabel: {
     fontSize: 13,
+  },
+  center: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 20,
+  },
+  errorText: {
+    opacity: 0.6,
+    marginBottom: 12,
+  },
+  retryButton: {
+    paddingHorizontal: 24,
+    paddingVertical: 10,
+    borderRadius: 8,
+  },
+  retryText: {
+    fontSize: 14,
+    fontWeight: '600',
   },
   list: {
     paddingBottom: 20,
@@ -237,7 +309,6 @@ const styles = StyleSheet.create({
   },
   name: {
     fontSize: 16,
-    color: '#000',
   },
   nameUnread: {
     fontWeight: '700',

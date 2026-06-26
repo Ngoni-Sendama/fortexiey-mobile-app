@@ -1,8 +1,9 @@
 import { useEffect, useRef } from 'react';
 import { Platform } from 'react-native';
-import Constants from 'expo-constants';
 import * as Notifications from 'expo-notifications';
 import { router } from 'expo-router';
+
+import { registerPushToken } from '@/services/api';
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
@@ -12,6 +13,15 @@ Notifications.setNotificationHandler({
     shouldSetBadge: false,
   }),
 });
+
+let onNewContactCallback: (() => void) | null = null;
+
+export function setOnNewContactCallback(cb: () => void) {
+  onNewContactCallback = cb;
+  return () => {
+    onNewContactCallback = null;
+  };
+}
 
 function redirect(notification: Notifications.Notification) {
   const data = notification.request.content.data;
@@ -25,6 +35,7 @@ function redirect(notification: Notifications.Notification) {
 
 export function useNotificationSetup() {
   const responseListener = useRef<Notifications.EventSubscription | null>(null);
+  const notificationListener = useRef<Notifications.EventSubscription | null>(null);
 
   useEffect(() => {
     registerForPushNotifications();
@@ -40,8 +51,15 @@ export function useNotificationSetup() {
       }
     );
 
+    notificationListener.current = Notifications.addNotificationReceivedListener(
+      () => {
+        onNewContactCallback?.();
+      }
+    );
+
     return () => {
       responseListener.current?.remove();
+      notificationListener.current?.remove();
     };
   }, []);
 }
@@ -66,13 +84,10 @@ async function registerForPushNotifications() {
   }
 
   try {
-    const projectId =
-      Constants?.expoConfig?.extra?.eas?.projectId ?? Constants?.easConfig?.projectId;
-    if (!projectId) {
-      throw new Error('Project ID not found');
-    }
-    const token = (await Notifications.getExpoPushTokenAsync({ projectId })).data;
-    console.log('Expo push token:', token);
+    const token = (await Notifications.getExpoPushTokenAsync()).data;
+    console.log('[Push] Got Expo token:', token);
+    await registerPushToken(token, Platform.OS);
+    console.log('[Push] Token registered successfully');
   } catch (e) {
     console.log('Failed to get push token:', e);
   }

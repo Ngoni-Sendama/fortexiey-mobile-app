@@ -15,10 +15,11 @@ export default function HomeScreen() {
         <Image
           source={require('@/assets/images/partial-react-logo.png')}
           style={styles.reactLogo}
+          contentFit="cover"
         />
       }>
       <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Welcome!</ThemedText>
+        <ThemedText type="title">Welcome back Forty!</ThemedText>
         <HelloWave />
       </ThemedView>
       <ThemedView style={styles.stepContainer}>
@@ -89,10 +90,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   reactLogo: {
-    height: 178,
-    width: 290,
-    bottom: 0,
-    left: 0,
-    position: 'absolute',
+    height:300,
+    width: '100%',
   },
 });

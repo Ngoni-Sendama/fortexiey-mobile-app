@@ -1,15 +1,17 @@
 import { Alert, Pressable, ScrollView, StyleSheet } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
+import { useState } from 'react';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { mockContacts, markContactRead } from '@/data/contacts';
+import { getContactById, markContactRead, SERVICE_COLORS } from '@/data/contacts';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 
 export default function ContactDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const contact = mockContacts.find((c) => c.id === id);
+  const [refresh, setRefresh] = useState(0);
+  const contact = getContactById(id);
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
 
@@ -21,12 +23,19 @@ export default function ContactDetailScreen() {
     );
   }
 
-  const toggleRead = () => {
+  const toggleRead = async () => {
     const wasRead = contact.read;
-    markContactRead(contact.id, !contact.read);
+    await markContactRead(contact.id, !contact.read);
+    setRefresh((k) => k + 1);
     Alert.alert('Success', wasRead ? 'Marked as unread' : 'Marked as read');
-    router.back();
   };
+
+  const d = new Date(contact.date);
+  const formattedDate = d.toLocaleDateString('en-US', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  }) + ' ' + d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false });
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
@@ -45,7 +54,7 @@ export default function ContactDetailScreen() {
       </ThemedView>
 
       <ThemedView style={styles.section}>
-        <FieldRow label="Date" value={contact.date} />
+        <FieldRow label="Date" value={formattedDate} />
         <FieldRow label="Email" value={contact.email} />
         <FieldRow label="Phone" value={contact.phone} />
         <FieldRow label="Service" value={contact.service} />
