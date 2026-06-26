@@ -1,1 +1,5 @@
-export { useColorScheme } from 'react-native';
+import { useTheme } from './theme-context';
+
+export function useColorScheme() {
+  return useTheme().colorScheme;
+}
