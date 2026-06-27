@@ -3,7 +3,9 @@ import { Platform } from 'react-native';
 import * as Notifications from 'expo-notifications';
 import { router } from 'expo-router';
 
+import { fetchAndSetContacts } from '@/data/contacts';
 import { registerPushToken } from '@/services/api';
+import Constants from 'expo-constants';
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
@@ -13,15 +15,6 @@ Notifications.setNotificationHandler({
     shouldSetBadge: false,
   }),
 });
-
-let onNewContactCallback: (() => void) | null = null;
-
-export function setOnNewContactCallback(cb: () => void) {
-  onNewContactCallback = cb;
-  return () => {
-    onNewContactCallback = null;
-  };
-}
 
 function redirect(notification: Notifications.Notification) {
   const data = notification.request.content.data;
@@ -53,7 +46,7 @@ export function useNotificationSetup() {
 
     notificationListener.current = Notifications.addNotificationReceivedListener(
       () => {
-        onNewContactCallback?.();
+        fetchAndSetContacts();
       }
     );
 
@@ -70,6 +63,7 @@ async function registerForPushNotifications() {
       name: 'Default',
       importance: Notifications.AndroidImportance.MAX,
       vibrationPattern: [0, 250, 250, 250],
+      lockscreenVisibility: Notifications.AndroidNotificationVisibility.PUBLIC,
     });
   }
 
@@ -84,7 +78,13 @@ async function registerForPushNotifications() {
   }
 
   try {
-    const token = (await Notifications.getExpoPushTokenAsync()).data;
+    const projectId =
+      Constants?.expoConfig?.extra?.eas?.projectId ?? Constants?.easConfig?.projectId;
+    if (!projectId) {
+      console.log('[Push] No projectId found — push token registration skipped');
+      return;
+    }
+    const token = (await Notifications.getExpoPushTokenAsync({ projectId })).data;
     console.log('[Push] Got Expo token:', token);
     await registerPushToken(token, Platform.OS);
     console.log('[Push] Token registered successfully');

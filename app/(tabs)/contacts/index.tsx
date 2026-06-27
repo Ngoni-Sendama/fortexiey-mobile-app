@@ -6,8 +6,7 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
-import { setOnNewContactCallback } from '@/hooks/use-notification-setup';
-import { getContacts, fetchAndSetContacts, SERVICE_COLORS, type Contact } from '@/data/contacts';
+import { getContacts, fetchAndSetContacts, subscribe, SERVICE_COLORS, type Contact } from '@/data/contacts';
 
 type Filter = 'all' | 'unread' | 'read';
 
@@ -136,8 +135,8 @@ export default function ContactListScreen() {
   );
 
   useEffect(() => {
-    return setOnNewContactCallback(loadContacts);
-  }, [loadContacts]);
+    return subscribe(() => setContacts(getContacts()));
+  }, []);
 
   const filtered = useMemo(
     () =>

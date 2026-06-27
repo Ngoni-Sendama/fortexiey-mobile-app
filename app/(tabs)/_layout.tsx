@@ -1,7 +1,7 @@
 import { Image } from 'expo-image';
 import { Pressable, StyleSheet } from 'react-native';
 import { Tabs } from 'expo-router';
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 
 import { HapticTab } from '@/components/haptic-tab';
 import { IconSymbol } from '@/components/ui/icon-symbol';
@@ -9,11 +9,18 @@ import { ThemedView } from '@/components/themed-view';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useTheme } from '@/hooks/theme-context';
+import { getContacts, subscribe } from '@/data/contacts';
 
 export default function TabLayout() {
+  const [unread, setUnread] = useState(0);
   const colorScheme = useColorScheme();
   const { toggle } = useTheme();
   const colors = Colors[colorScheme ?? 'light'];
+
+  useEffect(() => {
+    setUnread(getContacts().filter((c) => !c.read).length);
+    return subscribe(() => setUnread(getContacts().filter((c) => !c.read).length));
+  }, []);
 
   return (
     <>
@@ -53,6 +60,7 @@ export default function TabLayout() {
           options={{
             title: 'Contacts',
             tabBarIcon: ({ color }) => <IconSymbol size={28} name="person.fill" color={color} />,
+            tabBarBadge: unread > 0 ? unread : undefined,
           }}
         />
         <Tabs.Screen

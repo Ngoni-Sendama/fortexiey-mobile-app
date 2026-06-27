@@ -30,6 +30,18 @@ export interface Contact {
 }
 
 let contacts: Contact[] = [];
+let _listeners: Set<() => void> = new Set();
+
+export function subscribe(cb: () => void) {
+  _listeners.add(cb);
+  return () => {
+    _listeners.delete(cb);
+  };
+}
+
+function notify() {
+  _listeners.forEach((cb) => cb());
+}
 
 function toContact(a: ApiContact): Contact {
   return {
@@ -47,6 +59,7 @@ function toContact(a: ApiContact): Contact {
 export async function fetchAndSetContacts(): Promise<void> {
   const data = await apiFetchContacts();
   contacts = data.map(toContact);
+  notify();
 }
 
 export function getContacts(): Contact[] {
@@ -61,6 +74,7 @@ export async function markContactRead(id: string, read: boolean): Promise<void> 
   const contact = contacts.find((c) => c.id === id);
   if (!contact) return;
   contact.read = read;
+  notify();
   if (read) {
     await apiMarkRead(Number(id)).catch(() => {});
   }

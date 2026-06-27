@@ -97,6 +97,7 @@ const styles = StyleSheet.create({
   header: {
     alignItems: 'center',
     marginBottom: 28,
+    padding: 20,
   },
   avatar: {
     width: 72,
@@ -109,10 +110,12 @@ const styles = StyleSheet.create({
   },
   avatarText: {
     color: '#fff',
-    fontSize: 28,
+    fontSize: 26,
+    padding: 4,
   },
   name: {
     textAlign: 'center',
+    paddingHorizontal: 20,
   },
   section: {
     borderRadius: 12,
@@ -122,15 +125,15 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 16,
     marginBottom: 8,
-    paddingHorizontal: 16,
+    paddingHorizontal: 20,
     paddingTop: 12,
   },
   fieldRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 16,
+    paddingVertical: 14,
+    paddingHorizontal: 20,
   },
   fieldLabel: {
     opacity: 0.6,
@@ -143,7 +146,7 @@ const styles = StyleSheet.create({
   },
   message: {
     lineHeight: 22,
-    paddingHorizontal: 16,
+    paddingHorizontal: 20,
     paddingBottom: 16,
   },
   markButton: {
